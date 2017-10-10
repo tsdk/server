@@ -903,9 +903,8 @@ int TDBCSV::ReadBuffer(PGLOBAL g)
   {
   //char *p1, *p2, *p = NULL;
 	char *p2, *p = NULL;
-	int   i, n, rc = Txfp->ReadBuffer(g);
+	int   i, n, len, rc = Txfp->ReadBuffer(g);
   bool  bad = false;
-  size_t len;
 
   if (trace > 1)
     htrc("CSV: Row is '%s' rc=%d\n", To_Line, rc);
@@ -935,7 +934,7 @@ int TDBCSV::ReadBuffer(PGLOBAL g)
 
         if (p) {
           //len = p++ - p2;
-					len = p - p2 - 1;
+					len = (int)(p - p2 - 1);
 
 //        if (Sep != ' ')
 //          for (; *p == ' '; p++) ;          // Skip blanks
@@ -979,7 +978,7 @@ int TDBCSV::ReadBuffer(PGLOBAL g)
           return RC_NF;
 
       } else if ((p = strchr(p2, Sep)))
-        len = p - p2;
+        len = (int)(p - p2);
       else if (i == Fields - 1)
         len = strlen(p2);
       else if (Accept && Maxerr == 0) {
