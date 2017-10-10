@@ -5655,6 +5655,23 @@ int THD::binlog_write_table_map(TABLE *table, bool is_transactional,
       DBUG_RETURN(error);
     }
   }
+#ifdef WITH_WSREP
+    /* Get domain id only when gtid mode is set
+      If this event is replicate through a master then ,
+      we will forward the same gtid another nodes
+    */
+  if (wsrep_gtid_mode && this->variables.gtid_seq_no)
+  {
+    Gtid_log_event gtid_event(this, this->variables.gtid_seq_no,
+                          this->variables.gtid_domain_id,
+                          true, LOG_EVENT_SUPPRESS_USE_F,
+                          true, 0);
+    gtid_event.server_id= this->variables.server_id;
+
+    if ((error= writer.write(&gtid_event)))
+      DBUG_RETURN(error);
+  }
+#endif
   if ((error= writer.write(&the_event)))
     DBUG_RETURN(error);
 
@@ -5826,7 +5843,7 @@ MYSQL_BIN_LOG::write_gtid_event(THD *thd, bool standalone,
   DBUG_PRINT("enter", ("standalone: %d", standalone));
 
 #ifdef WITH_WSREP
-  if (WSREP(thd) && thd->wsrep_trx_meta.gtid.seqno != -1 && wsrep_gtid_mode)
+  if (WSREP(thd) && thd->wsrep_trx_meta.gtid.seqno != -1 && wsrep_gtid_mode && !thd->variables.gtid_seq_no)
   {
     domain_id= wsrep_gtid_domain_id;
   } else {
@@ -6718,6 +6735,24 @@ int MYSQL_BIN_LOG::write_cache(THD *thd, IO_CACHE *cache)
   mysql_mutex_assert_owner(&LOCK_log);
   if (reinit_io_cache(cache, READ_CACHE, 0, 0, 0))
     DBUG_RETURN(ER_ERROR_ON_WRITE);
+  uchar *read_pos= cache->read_pos;
+
+#ifdef WITH_WSREP
+  /*
+    In the cache we have gtid event if , below condition is true,
+    then we will simply increment the read position of cache by
+    the length of Gtid_log_event.
+  */
+  if (wsrep_gtid_mode && thd->variables.gtid_seq_no)
+  {
+    uchar *head= read_pos;
+    uint data_len= uint4korr(head + EVENT_LEN_OFFSET);
+    uint event_type= (uchar)head[EVENT_TYPE_OFFSET];
+    if (event_type == GTID_LOG_EVENT)
+      cache->read_pos+= data_len;
+  }
+#endif
+
   uint length= my_b_bytes_in_cache(cache), group, carry, hdr_offs;
   long val;
   ulong end_log_pos_inc= 0; // each event processed adds BINLOG_CHECKSUM_LEN 2 t

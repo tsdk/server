@@ -1,0 +1,92 @@
+START SLAVE;
+CREATE TABLE t2 (f1 INTEGER PRIMARY KEY, f2 int unique) ENGINE=InnoDB;
+INSERT INTO t2 VALUES(1,11);
+INSERT INTO t2 VALUES(2,22);
+INSERT INTO t2 VALUES(3,33);
+SELECT @@global.gtid_binlog_state;
+@@global.gtid_binlog_state
+1-1-4
+INSERT INTO t2 VALUES(4,44);
+INSERT INTO t2 VALUES(5,55);
+INSERT INTO t2 VALUES(6,66);
+SELECT @@global.gtid_binlog_state;
+@@global.gtid_binlog_state
+1-1-4,2-2-3
+INSERT INTO t2 VALUES(7,77);
+INSERT INTO t2 VALUES(8,88);
+SELECT @@global.gtid_binlog_state;
+@@global.gtid_binlog_state
+1-1-4,2-2-3,2-3-5
+CREATE TABLE t1 (f1 CHAR(255)) ENGINE=InnoDB;
+SET AUTOCOMMIT=OFF;
+START TRANSACTION;
+INSERT INTO t1 VALUES ('node1_committed_before');
+INSERT INTO t1 VALUES ('node1_committed_before');
+COMMIT;
+SET AUTOCOMMIT=OFF;
+START TRANSACTION;
+INSERT INTO t1 VALUES ('node2_committed_before');
+INSERT INTO t1 VALUES ('node2_committed_before');
+COMMIT;
+Shutting down server ...
+SET AUTOCOMMIT=OFF;
+START TRANSACTION;
+INSERT INTO t1 VALUES ('node1_committed_during');
+INSERT INTO t1 VALUES ('node1_committed_during');
+COMMIT;
+Starting server ...
+SET AUTOCOMMIT=OFF;
+START TRANSACTION;
+INSERT INTO t1 VALUES ('node3_committed_after');
+INSERT INTO t1 VALUES ('node3_committed_after');
+COMMIT;
+Select * from t1 order by f1;
+f1
+node1_committed_before
+node1_committed_before
+node1_committed_during
+node1_committed_during
+node2_committed_before
+node2_committed_before
+node3_committed_after
+node3_committed_after
+Select * from t1 order by f1;
+f1
+node1_committed_before
+node1_committed_before
+node1_committed_during
+node1_committed_during
+node2_committed_before
+node2_committed_before
+node3_committed_after
+node3_committed_after
+SELECT @@global.gtid_binlog_state;
+@@global.gtid_binlog_state
+1-1-6,2-2-7,2-3-8
+SELECT @@global.gtid_binlog_state;
+@@global.gtid_binlog_state
+1-1-6,2-2-7,2-3-8
+SET AUTOCOMMIT=ON;
+SET AUTOCOMMIT=ON;
+SET AUTOCOMMIT=ON;
+STOP slave;
+INSERT INTO t1 VALUES ('node2_slave_stoped');
+INSERT INTO t1 VALUES ('node1_slave_stoped');
+INSERT INTO t1 VALUES ('node2_slave_stoped_inserted');
+start slave;
+INSERT INTO t1 VALUES ('node2_slave_started');
+SELECT COUNT(*) from t1;
+COUNT(*)
+11
+SELECT @@global.gtid_binlog_state;
+@@global.gtid_binlog_state
+1-1-6,2-3-8,2-2-11
+SELECT COUNT(*) from t1;
+COUNT(*)
+11
+SELECT @@global.gtid_binlog_state;
+@@global.gtid_binlog_state
+1-1-6,2-3-8,2-2-11
+DROP TABLE t2,t1;
+STOP SLAVE;
+RESET SLAVE ALL;
