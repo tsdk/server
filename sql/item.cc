@@ -2133,6 +2133,9 @@ bool Item_func_or_sum::agg_item_set_converter(const DTCollation &coll,
                                               Item **args, uint nargs,
                                               uint flags, int item_sep)
 {
+  THD *thd= current_thd;
+  if (thd->lex->is_ps_or_view_context_analysis())
+    return false;
   Item **arg, *safe_args[2]= {NULL, NULL};
 
   /*
@@ -2148,7 +2151,6 @@ bool Item_func_or_sum::agg_item_set_converter(const DTCollation &coll,
     safe_args[1]= args[item_sep];
   }
 
-  THD *thd= current_thd;
   bool res= FALSE;
   uint i;
 
