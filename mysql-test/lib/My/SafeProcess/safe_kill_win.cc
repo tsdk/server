@@ -25,6 +25,64 @@
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <psapi.h>
+#include <DbgHelp.h>
+
+static int create_dump(DWORD pid)
+{
+  char path[MAX_PATH];
+  int ret= -1;
+  HANDLE process= INVALID_HANDLE_VALUE;
+  HANDLE file= INVALID_HANDLE_VALUE;
+  char *p;
+
+  process = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, (DWORD)pid);
+  if (!process)
+  {
+    fprintf(stderr,"safe_kill : cannot open process pid=%u to create dump, last error %u\n",
+      pid, GetLastError());
+    goto exit;
+  }
+
+  if (GetModuleFileNameEx(process, NULL, path, MAX_PATH) == 0)
+  {
+    fprintf(stderr,"safe_kill : cannot read process path for pid %u, last error %u\n",
+      pid, GetLastError());
+    goto exit;
+  }
+
+  if ((p = strrchr(path, '.')) == 0)
+    p= path + strlen(path);
+
+  strncpy(p, ".dmp", path + MAX_PATH - p);
+  file = CreateFile(path, GENERIC_READ | GENERIC_WRITE,
+    0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+
+  if (file == INVALID_HANDLE_VALUE)
+  {
+    fprintf(stderr,"safe_kill : CreateFile() failed for path %s, last error = %u\n",
+      path, GetLastError());
+    goto exit;
+  }
+
+  if (!MiniDumpWriteDump(process, pid, file, MiniDumpNormal, 0,0,0))
+  {
+    fprintf(stderr, "Failed to write minidump to %s, last error %u\n",
+      path, GetLastError());
+    goto exit;
+  }
+
+  ret = 0;
+  fprintf(stderr, "Minidump written to %s\n", path);
+
+exit:
+  if(process!= 0 && process != INVALID_HANDLE_VALUE)
+    CloseHandle(process);
+
+  if (file != 0 && file != INVALID_HANDLE_VALUE)
+    CloseHandle(file);
+  return ret;
+}
 
 int main(int argc, const char** argv )
 {
@@ -37,12 +95,16 @@ int main(int argc, const char** argv )
   signal(SIGBREAK, SIG_IGN);
   signal(SIGTERM,  SIG_IGN);
 
-  if (argc != 2) {
-    fprintf(stderr, "safe_kill <pid>\n");
+  if ((argc != 2 && argc != 3) || (argc == 3 && strcmp(argv[2],"dump"))) {
+    fprintf(stderr, "safe_kill <pid> [dump]\n");
     exit(2);
   }
   pid= atoi(argv[1]);
 
+  if (argc == 3)
+  {
+    return create_dump(pid);
+  }
   _snprintf(safe_process_name, sizeof(safe_process_name),
             "safe_process[%d]", pid);
 
