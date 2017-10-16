@@ -1,0 +1,21 @@
+# The test verifies fixes to MDEV-9510: Segmentation fault in binlog thread.
+# Specifically, a scenario otherwise causing a similar segfault is replayed.
+# The test must pass having no crashes.
+
+--source include/galera_cluster.inc
+--source include/have_innodb.inc
+
+--connection node_1
+USE test;
+CREATE TABLE t1(i INT) ENGINE=INNODB;
+INSERT INTO t1 VALUES(1);
+SET @@SESSION.sql_log_bin=0;
+INSERT INTO t1 VALUES(2);
+SET @@SESSION.sql_log_bin=1;
+FLUSH BINARY LOGS;
+
+# Cleanup
+DROP TABLE t1;
+--source include/galera_end.inc
+--echo # End of tests
+
