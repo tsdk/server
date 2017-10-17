@@ -649,7 +649,7 @@ END;//
 set role r2;
 show create procedure user1_proc;
 Procedure	sql_mode	Create Procedure	character_set_client	collation_connection	Database Collation
-user1_proc		CREATE DEFINER=`r2` PROCEDURE `user1_proc`()
+user1_proc	NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION	CREATE DEFINER=`r2` PROCEDURE `user1_proc`()
     SQL SECURITY INVOKER
 BEGIN
 SELECT NOW(), VERSION();
@@ -669,7 +669,7 @@ SELECT NOW(), VERSION();
 END;//
 show create procedure user1_proc2;
 Procedure	sql_mode	Create Procedure	character_set_client	collation_connection	Database Collation
-user1_proc2		CREATE DEFINER=`r1` PROCEDURE `user1_proc2`()
+user1_proc2	NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION	CREATE DEFINER=`r1` PROCEDURE `user1_proc2`()
     SQL SECURITY INVOKER
 BEGIN
 SELECT NOW(), VERSION();
@@ -681,7 +681,7 @@ END	latin1	latin1_swedish_ci	latin1_swedish_ci
 set role r2;
 show create procedure user1_proc2;
 Procedure	sql_mode	Create Procedure	character_set_client	collation_connection	Database Collation
-user1_proc2		CREATE DEFINER=`r1` PROCEDURE `user1_proc2`()
+user1_proc2	NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION	CREATE DEFINER=`r1` PROCEDURE `user1_proc2`()
     SQL SECURITY INVOKER
 BEGIN
 SELECT NOW(), VERSION();
@@ -716,7 +716,7 @@ END;//
 use rtest;
 show create procedure sensitive_proc;
 Procedure	sql_mode	Create Procedure	character_set_client	collation_connection	Database Collation
-sensitive_proc		CREATE DEFINER=`user_like_role`@`%` PROCEDURE `sensitive_proc`()
+sensitive_proc	NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION	CREATE DEFINER=`user_like_role`@`%` PROCEDURE `sensitive_proc`()
     SQL SECURITY INVOKER
 BEGIN
 SELECT NOW(), VERSION();
