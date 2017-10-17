@@ -2629,8 +2629,9 @@ fts_get_next_doc_id(
 		return(DB_SUCCESS);
 	}
 
+	DEBUG_SYNC_C("get_next_FTS_DOC_ID");
 	mutex_enter(&cache->doc_id_lock);
-	*doc_id = ++cache->next_doc_id;
+	*doc_id = cache->next_doc_id++;
 	mutex_exit(&cache->doc_id_lock);
 
 	return(DB_SUCCESS);
